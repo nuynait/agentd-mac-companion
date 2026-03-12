@@ -1,0 +1,29 @@
+name: Agentd
+options:
+  bundleIdPrefix: com.tshan
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  minimumXcodeGenVersion: "2.40"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+
+targets:
+  Agentd:
+    type: application
+    platform: macOS
+    sources:
+      - path: Agentd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tshan.agentd
+        PRODUCT_NAME: Agentd
+        INFOPLIST_FILE: Agentd/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Agentd/Agentd.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: false
+        ENABLE_APP_SANDBOX: false
+        SWIFT_EMIT_LOC_STRINGS: true
