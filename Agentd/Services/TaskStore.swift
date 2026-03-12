@@ -70,29 +70,30 @@ final class TaskStore: ObservableObject {
             try? fm.createDirectory(at: tasksDir, withIntermediateDirectories: true)
         }
 
+        // FSEvents for immediate response to file additions/removals
         let fd = open(tasksDir.path, O_EVTONLY)
-        guard fd >= 0 else {
-            // Fall back to polling if we can't open the directory
-            startPolling()
-            return
+        if fd >= 0 {
+            let source = DispatchSource.makeFileSystemObjectSource(
+                fileDescriptor: fd,
+                eventMask: [.write, .delete, .rename, .extend],
+                queue: .main
+            )
+
+            source.setEventHandler { [weak self] in
+                self?.loadTasks()
+            }
+
+            source.setCancelHandler {
+                close(fd)
+            }
+
+            source.resume()
+            self.source = source
         }
 
-        let source = DispatchSource.makeFileSystemObjectSource(
-            fileDescriptor: fd,
-            eventMask: [.write, .delete, .rename, .extend],
-            queue: .main
-        )
-
-        source.setEventHandler { [weak self] in
-            self?.loadTasks()
-        }
-
-        source.setCancelHandler {
-            close(fd)
-        }
-
-        source.resume()
-        self.source = source
+        // Polling to catch in-place file content changes (e.g., status, runCount, lastRun updates)
+        // FSEvents on a directory only fires when files are added/removed, not when contents change
+        startPolling()
     }
 
     private func startPolling() {
