@@ -48,7 +48,7 @@ struct TaskDetailView: View {
 
     private var infoGrid: some View {
         let scheduleIcon = task.schedule.isRecurring ? "repeat" : "clock"
-        let createdValue = task.createdAtDate?.formatted(date: .abbreviated, time: .shortened) ?? task.createdAt
+        let createdValue = DateFormatting.localString(from: task.createdAt)
         return LazyVGrid(columns: [
             GridItem(.flexible(), alignment: .topLeading),
             GridItem(.flexible(), alignment: .topLeading),
@@ -59,7 +59,7 @@ struct TaskDetailView: View {
             InfoCard(title: "Run Count", value: "\(task.runCount)", icon: "number")
             InfoCard(title: "Created", value: createdValue, icon: "calendar")
             if let lastRun = task.lastRunDate {
-                InfoCard(title: "Last Run", value: lastRun.formatted(date: .abbreviated, time: .shortened), icon: "clock.arrow.circlepath")
+                InfoCard(title: "Last Run", value: DateFormatting.localString(from: lastRun), icon: "clock.arrow.circlepath")
             }
         }
     }

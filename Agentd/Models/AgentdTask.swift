@@ -1,5 +1,37 @@
 import Foundation
 
+// MARK: - Date Formatting
+
+enum DateFormatting {
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        return f
+    }()
+
+    private static let isoFormatterWithFractional: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+
+    static func parseISO(_ string: String) -> Date? {
+        isoFormatterWithFractional.date(from: string) ?? isoFormatter.date(from: string)
+    }
+
+    static func localString(from isoString: String) -> String {
+        guard let date = parseISO(isoString) else {
+            return isoString
+        }
+        return localString(from: date)
+    }
+
+    static func localString(from date: Date) -> String {
+        let tz = TimeZone.current.abbreviation(for: date) ?? TimeZone.current.identifier
+        return "\(date.formatted(date: .abbreviated, time: .shortened)) \(tz)"
+    }
+}
+
 // MARK: - Schedule
 
 enum Schedule: Codable, Hashable {
@@ -18,7 +50,7 @@ enum Schedule: Codable, Hashable {
     var description: String {
         switch self {
         case .cron(let s): s.description
-        case .oneshot(let s): "once at \(s.atDate?.formatted() ?? s.at)"
+        case .oneshot(let s): "once at \(DateFormatting.localString(from: s.at))"
         case .interval(let s): s.description
         }
     }
@@ -109,7 +141,7 @@ struct OneshotSchedule: Codable, Hashable {
     }
 
     var atDate: Date? {
-        ISO8601DateFormatter().date(from: at)
+        DateFormatting.parseISO(at)
     }
 }
 
@@ -208,8 +240,10 @@ enum StopCondition: Codable, Hashable {
 
     var description: String {
         switch self {
-        case .maxRuns(let count): "after \(count) runs"
-        case .afterDate(let date): "after \(date)"
+        case .maxRuns(let count):
+            return "after \(count) runs"
+        case .afterDate(let date):
+            return "after \(DateFormatting.localString(from: date))"
         }
     }
 
@@ -277,12 +311,12 @@ struct AgentdTask: Codable, Identifiable, Hashable {
     var conditionalStop: ConditionalStop?
 
     var createdAtDate: Date? {
-        ISO8601DateFormatter().date(from: createdAt)
+        DateFormatting.parseISO(createdAt)
     }
 
     var lastRunDate: Date? {
         guard let lastRun else { return nil }
-        return ISO8601DateFormatter().date(from: lastRun)
+        return DateFormatting.parseISO(lastRun)
     }
 
     var statusColor: String {
@@ -302,7 +336,7 @@ struct AgentdTask: Codable, Identifiable, Hashable {
         case .oneshot(let oneshot):
             guard let date = oneshot.atDate else { return nil }
             if date > Date() {
-                return "scheduled for \(date.formatted())"
+                return "scheduled for \(DateFormatting.localString(from: date))"
             }
             return "past schedule"
         case .interval(let interval):
