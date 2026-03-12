@@ -2,93 +2,144 @@ import SwiftUI
 
 struct TaskDetailView: View {
     let task: AgentdTask
+    @Binding var selectedTaskId: String?
     @EnvironmentObject var store: TaskStore
-    @State private var showingLog = false
+    @State private var showingDeleteConfirm = false
+    @State private var deleteError: String?
+    @State private var showingDeleteError = false
 
     var body: some View {
+        scrollContent
+            .navigationTitle(task.id)
+            .toolbar { toolbarContent }
+            .alert("Delete Task?", isPresented: $showingDeleteConfirm) {
+                deleteConfirmButtons
+            } message: {
+                Text("This will unload the launchd plist, delete the task, and remove its log. This cannot be undone.")
+            }
+            .alert("Delete Failed", isPresented: $showingDeleteError) {
+                Button("OK") {}
+            } message: {
+                Text(deleteError ?? "Unknown error")
+            }
+    }
+
+    private var scrollContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                // Header
                 header
-
                 Divider()
-
-                // Info grid
-                LazyVGrid(columns: [
-                    GridItem(.flexible(), alignment: .topLeading),
-                    GridItem(.flexible(), alignment: .topLeading),
-                ], spacing: 16) {
-                    InfoCard(title: "Provider", value: task.provider.capitalized, icon: task.provider == "claude" ? "brain" : "terminal")
-                    InfoCard(title: "Status", value: task.status.capitalized, icon: "circle.fill", color: statusColor)
-                    InfoCard(title: "Schedule", value: task.schedule.description, icon: task.schedule.isCron ? "repeat" : "clock")
-                    InfoCard(title: "Run Count", value: "\(task.runCount)", icon: "number")
-                    InfoCard(title: "Created", value: task.createdAtDate?.formatted(date: .abbreviated, time: .shortened) ?? task.createdAt, icon: "calendar")
-
-                    if let lastRun = task.lastRunDate {
-                        InfoCard(title: "Last Run", value: lastRun.formatted(date: .abbreviated, time: .shortened), icon: "clock.arrow.circlepath")
-                    }
-                }
-
-                // Working directory
-                DetailSection(title: "Working Directory") {
-                    HStack {
-                        Image(systemName: "folder")
-                            .foregroundStyle(.secondary)
-                        Text(task.cwd)
-                            .font(.system(.body, design: .monospaced))
-                            .textSelection(.enabled)
-                    }
-                }
-
-                // Prompt
-                DetailSection(title: "Prompt") {
-                    Text(task.prompt)
-                        .textSelection(.enabled)
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
-                }
-
-                // Git Context
+                infoGrid
+                workingDirectorySection
+                promptSection
                 if let context = task.context {
                     contextSection(context)
                 }
-
-                // Stop Conditions
-                if let stops = task.stopConditions, !stops.isEmpty {
-                    DetailSection(title: "Stop Conditions") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(Array(stops.enumerated()), id: \.offset) { _, stop in
-                                Label(stop.description, systemImage: "stop.circle")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
-
-                if let conditional = task.conditionalStop {
-                    DetailSection(title: "Conditional Stop") {
-                        Label(conditional.condition, systemImage: "questionmark.circle")
-                            .foregroundStyle(.orange)
-                    }
-                }
-
-                // Log viewer
-                DetailSection(title: "Log Output") {
-                    LogView(taskId: task.id)
-                }
+                stopConditionsSection
+                logSection
             }
             .padding(24)
         }
-        .navigationTitle(task.id)
-        .toolbar {
-            ToolbarItem {
-                Button {
-                    store.refreshLog(for: task.id)
-                } label: {
-                    Image(systemName: "arrow.clockwise")
+    }
+
+    private var infoGrid: some View {
+        let scheduleIcon = task.schedule.isRecurring ? "repeat" : "clock"
+        let createdValue = task.createdAtDate?.formatted(date: .abbreviated, time: .shortened) ?? task.createdAt
+        return LazyVGrid(columns: [
+            GridItem(.flexible(), alignment: .topLeading),
+            GridItem(.flexible(), alignment: .topLeading),
+        ], spacing: 16) {
+            InfoCard(title: "Provider", value: task.provider.capitalized, icon: task.provider == "claude" ? "brain" : "terminal")
+            InfoCard(title: "Status", value: task.status.capitalized, icon: "circle.fill", color: statusColor)
+            InfoCard(title: "Schedule", value: task.schedule.description, icon: scheduleIcon)
+            InfoCard(title: "Run Count", value: "\(task.runCount)", icon: "number")
+            InfoCard(title: "Created", value: createdValue, icon: "calendar")
+            if let lastRun = task.lastRunDate {
+                InfoCard(title: "Last Run", value: lastRun.formatted(date: .abbreviated, time: .shortened), icon: "clock.arrow.circlepath")
+            }
+        }
+    }
+
+    private var workingDirectorySection: some View {
+        DetailSection(title: "Working Directory") {
+            HStack {
+                Image(systemName: "folder")
+                    .foregroundStyle(.secondary)
+                Text(task.cwd)
+                    .font(.system(.body, design: .monospaced))
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
+    private var promptSection: some View {
+        DetailSection(title: "Prompt") {
+            Text(task.prompt)
+                .textSelection(.enabled)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+        }
+    }
+
+    @ViewBuilder
+    private var stopConditionsSection: some View {
+        if let stops = task.stopConditions, !stops.isEmpty {
+            DetailSection(title: "Stop Conditions") {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(stops.enumerated()), id: \.offset) { _, stop in
+                        Label(stop.description, systemImage: "stop.circle")
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .help("Refresh log")
+            }
+        }
+        if let conditional = task.conditionalStop {
+            DetailSection(title: "Conditional Stop") {
+                Label(conditional.condition, systemImage: "questionmark.circle")
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private var logSection: some View {
+        DetailSection(title: "Log Output") {
+            LogView(taskId: task.id)
+        }
+    }
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Button {
+                store.refreshLog(for: task.id)
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .help("Refresh log")
+        }
+        ToolbarItem {
+            Button(role: .destructive) {
+                showingDeleteConfirm = true
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(Color.statusFailed)
+            }
+            .help("Delete task")
+        }
+    }
+
+    @ViewBuilder
+    private var deleteConfirmButtons: some View {
+        Button("Cancel", role: .cancel) {}
+        Button("Delete", role: .destructive) {
+            Task {
+                if let error = await store.removeTask(task.id) {
+                    deleteError = error
+                    showingDeleteError = true
+                } else {
+                    selectedTaskId = nil
+                }
             }
         }
     }

@@ -62,6 +62,34 @@ final class TaskStore: ObservableObject {
         logs[taskId] = loadLog(for: taskId)
     }
 
+    /// Runs `agentd rm <id>` to properly unload plist and delete task + log files.
+    /// Returns nil on success, or an error message string on failure.
+    func removeTask(_ taskId: String) async -> String? {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+        process.arguments = ["agentd", "rm", taskId]
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            if process.terminationStatus == 0 {
+                logs.removeValue(forKey: taskId)
+                loadTasks()
+                return nil
+            } else {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? "Unknown error"
+                return output.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     private func startWatching() {
         let fm = FileManager.default
 

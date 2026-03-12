@@ -80,7 +80,7 @@ struct ContentView: View {
         } detail: {
             if let taskId = selectedTaskId,
                let task = store.tasks.first(where: { $0.id == taskId }) {
-                TaskDetailView(task: task)
+                TaskDetailView(task: task, selectedTaskId: $selectedTaskId)
             } else {
                 ContentUnavailableView {
                     Label("Select a Task", systemImage: "sidebar.left")
