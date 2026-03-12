@@ -62,6 +62,25 @@ final class TaskStore: ObservableObject {
         logs[taskId] = loadLog(for: taskId)
     }
 
+    /// Updates the prompt in the task JSON file so the next agentd run uses the new prompt.
+    /// Returns nil on success, or an error message string on failure.
+    func updatePrompt(taskId: String, newPrompt: String) -> String? {
+        let taskFile = tasksDir.appendingPathComponent("\(taskId).json")
+        do {
+            let data = try Data(contentsOf: taskFile)
+            guard var json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return "Failed to parse task JSON"
+            }
+            json["prompt"] = newPrompt
+            let updated = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
+            try updated.write(to: taskFile)
+            loadTasks()
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     /// Runs `agentd rm <id>` to properly unload plist and delete task + log files.
     /// Returns nil on success, or an error message string on failure.
     func removeTask(_ taskId: String) async -> String? {

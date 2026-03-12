@@ -7,6 +7,10 @@ struct TaskDetailView: View {
     @State private var showingDeleteConfirm = false
     @State private var deleteError: String?
     @State private var showingDeleteError = false
+    @State private var editedPrompt: String = ""
+    @State private var isEditingPrompt = false
+    @State private var promptSaveError: String?
+    @State private var showingPromptSaveError = false
 
     var body: some View {
         scrollContent
@@ -74,11 +78,52 @@ struct TaskDetailView: View {
 
     private var promptSection: some View {
         DetailSection(title: "Prompt") {
-            Text(task.prompt)
-                .textSelection(.enabled)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+            VStack(alignment: .leading, spacing: 8) {
+                if isEditingPrompt {
+                    TextEditor(text: $editedPrompt)
+                        .font(.body)
+                        .frame(minHeight: 80)
+                        .padding(4)
+                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: 1))
+                    HStack {
+                        Button("Cancel") {
+                            isEditingPrompt = false
+                            editedPrompt = task.prompt
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        Button("Save") {
+                            if let error = store.updatePrompt(taskId: task.id, newPrompt: editedPrompt) {
+                                promptSaveError = error
+                                showingPromptSaveError = true
+                            } else {
+                                isEditingPrompt = false
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .disabled(editedPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || editedPrompt == task.prompt)
+                    }
+                } else {
+                    Text(task.prompt)
+                        .textSelection(.enabled)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
+                    Button("Edit Prompt") {
+                        editedPrompt = task.prompt
+                        isEditingPrompt = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+            .alert("Save Failed", isPresented: $showingPromptSaveError) {
+                Button("OK") {}
+            } message: {
+                Text(promptSaveError ?? "Unknown error")
+            }
         }
     }
 
