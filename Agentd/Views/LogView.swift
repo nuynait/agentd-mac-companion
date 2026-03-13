@@ -20,7 +20,7 @@ struct LogView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
                     }
-                    .frame(maxHeight: 400)
+                    .frame(maxHeight: .infinity)
                     .background(.black.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
