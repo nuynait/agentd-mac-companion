@@ -86,8 +86,8 @@ final class TaskStore: ObservableObject {
     func removeTask(_ taskId: String) async -> String? {
         let process = Process()
         let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["agentd", "rm", taskId]
+        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        process.arguments = ["-l", "-c", "agentd rm \(taskId)"]
         process.standardOutput = pipe
         process.standardError = pipe
 
