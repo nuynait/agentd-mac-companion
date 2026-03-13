@@ -170,7 +170,19 @@ struct TaskDetailView: View {
     }
 
     private var logSection: some View {
-        DetailSection(title: "Log Output") {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Log Output")
+                    .font(.system(.headline, weight: .semibold))
+                Spacer()
+                HStack(spacing: 3) {
+                    KeyHintInline(key: "+")
+                    KeyHintInline(key: "-")
+                    Text("font size")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
             LogView(taskId: task.id)
         }
     }

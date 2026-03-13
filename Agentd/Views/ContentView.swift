@@ -15,6 +15,7 @@ struct ContentView: View {
     @State private var isEditingPrompt = false
     @State private var deleteError: String?
     @State private var showingDeleteError = false
+    @AppStorage("logFontSize") private var logFontSize: Double = 11
     @State private var eventMonitor: Any?
 
     enum TaskFilter: String, CaseIterable {
@@ -231,6 +232,12 @@ struct ContentView: View {
         case "?":
             showingCheatsheet = true
             return nil
+        case "+", "=":
+            logFontSize = min(logFontSize + 1, 24)
+            return nil
+        case "-":
+            logFontSize = max(logFontSize - 1, 8)
+            return nil
         default:
             return event
         }
@@ -347,6 +354,7 @@ struct ContentView: View {
                     CheatsheetRow(keys: "e", description: "Edit prompt")
                     CheatsheetRow(keys: "r", description: "Refresh")
                     CheatsheetRow(keys: "s", description: "Toggle sidebar")
+                    CheatsheetRow(keys: "+ / -", description: "Log font size")
                     Divider()
                     CheatsheetRow(keys: "esc", description: "Cancel edit")
                     CheatsheetRow(keys: "\u{2318}\u{21A9}", description: "Save edit")

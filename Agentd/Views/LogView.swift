@@ -3,6 +3,7 @@ import SwiftUI
 struct LogView: View {
     let taskId: String
     @EnvironmentObject var store: TaskStore
+    @AppStorage("logFontSize") var logFontSize: Double = 11
     @State private var logContent: String?
     @State private var isLoading = false
 
@@ -14,7 +15,7 @@ struct LogView: View {
                 } else {
                     ScrollView(.vertical) {
                         Text(content)
-                            .font(.system(.caption, design: .monospaced))
+                            .font(.system(size: logFontSize, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
