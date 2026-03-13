@@ -87,7 +87,7 @@ final class TaskStore: ObservableObject {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-l", "-c", "agentd rm \(taskId)"]
+        process.arguments = ["-i", "-l", "-c", "agentd rm \(taskId)"]
         process.standardOutput = pipe
         process.standardError = pipe
 
