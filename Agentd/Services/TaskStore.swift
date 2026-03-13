@@ -81,33 +81,33 @@ final class TaskStore: ObservableObject {
         }
     }
 
-    /// Resolves the user's shell PATH by running a login shell once.
-    private static let userPATH: String = {
-        let process = Process()
-        let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-l", "-c", "echo $PATH"]
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        try? process.run()
-        process.waitUntilExit()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    /// Finds the agentd binary by checking common install locations.
+    private static let agentdPath: String? = {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let candidates = [
+            "\(home)/.bun/bin/agentd",
+            "\(home)/.local/bin/agentd",
+            "/usr/local/bin/agentd",
+            "/opt/homebrew/bin/agentd",
+        ]
+        return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }()
 
     /// Runs `agentd rm <id>` to properly unload plist and delete task + log files.
     /// Returns nil on success, or an error message string on failure.
     func removeTask(_ taskId: String) async -> String? {
+        guard let agentd = Self.agentdPath else {
+            return "agentd not found. Install it or check your PATH."
+        }
+
         let taskIdCopy = taskId
+        let agentdCopy = agentd
         let result: (status: Int32, output: String) = await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 let pipe = Pipe()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                process.arguments = ["agentd", "rm", taskIdCopy]
-                var env = ProcessInfo.processInfo.environment
-                env["PATH"] = Self.userPATH
-                process.environment = env
+                process.executableURL = URL(fileURLWithPath: agentdCopy)
+                process.arguments = ["rm", taskIdCopy]
                 process.standardOutput = pipe
                 process.standardError = pipe
 
