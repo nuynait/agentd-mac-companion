@@ -9,6 +9,7 @@ struct TaskDetailView: View {
     @State private var editedPrompt: String = ""
     @State private var promptSaveError: String?
     @State private var showingPromptSaveError = false
+    @FocusState private var isPromptFocused: Bool
 
     var body: some View {
         scrollContent
@@ -17,6 +18,9 @@ struct TaskDetailView: View {
             .onChange(of: isEditingPrompt) { _, editing in
                 if editing {
                     editedPrompt = task.prompt
+                    isPromptFocused = true
+                } else {
+                    isPromptFocused = false
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .cancelEdit)) { _ in
@@ -81,6 +85,7 @@ struct TaskDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 if isEditingPrompt {
                     TextEditor(text: $editedPrompt)
+                        .focused($isPromptFocused)
                         .font(.body)
                         .frame(minHeight: 80)
                         .padding(4)
