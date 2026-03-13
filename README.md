@@ -23,9 +23,9 @@ Agentd for Mac provides a visual interface to monitor all your scheduled AI agen
 
 ## Keyboard Shortcuts
 
-<p align="center">
-  <img src="screenshots/keybinding.png" alt="Keyboard Shortcuts" width="360">
-</p>
+Press `?` to view the full cheatsheet in-app.
+
+![Keyboard Shortcuts](screenshots/keybinding.png)
 
 | Key | Action |
 |-----|--------|
