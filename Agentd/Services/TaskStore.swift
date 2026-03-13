@@ -81,31 +81,54 @@ final class TaskStore: ObservableObject {
         }
     }
 
-    /// Runs `agentd rm <id>` to properly unload plist and delete task + log files.
-    /// Returns nil on success, or an error message string on failure.
-    func removeTask(_ taskId: String) async -> String? {
+    /// Resolves the user's shell PATH by running a login shell once.
+    private static let userPATH: String = {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-i", "-l", "-c", "agentd rm \(taskId)"]
+        process.arguments = ["-l", "-c", "echo $PATH"]
         process.standardOutput = pipe
-        process.standardError = pipe
+        process.standardError = FileHandle.nullDevice
+        try? process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        return (String(data: data, encoding: .utf8) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }()
 
-        do {
-            try process.run()
-            process.waitUntilExit()
+    /// Runs `agentd rm <id>` to properly unload plist and delete task + log files.
+    /// Returns nil on success, or an error message string on failure.
+    func removeTask(_ taskId: String) async -> String? {
+        let taskIdCopy = taskId
+        let result: (status: Int32, output: String) = await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                let pipe = Pipe()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                process.arguments = ["agentd", "rm", taskIdCopy]
+                var env = ProcessInfo.processInfo.environment
+                env["PATH"] = Self.userPATH
+                process.environment = env
+                process.standardOutput = pipe
+                process.standardError = pipe
 
-            if process.terminationStatus == 0 {
-                logs.removeValue(forKey: taskId)
-                loadTasks()
-                return nil
-            } else {
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: data, encoding: .utf8) ?? "Unknown error"
-                return output.trimmingCharacters(in: .whitespacesAndNewlines)
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    continuation.resume(returning: (process.terminationStatus, output))
+                } catch {
+                    continuation.resume(returning: (-1, error.localizedDescription))
+                }
             }
-        } catch {
-            return error.localizedDescription
+        }
+
+        if result.status == 0 {
+            logs.removeValue(forKey: taskId)
+            loadTasks()
+            return nil
+        } else {
+            return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 
