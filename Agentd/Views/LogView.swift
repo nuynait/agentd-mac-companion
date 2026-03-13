@@ -50,10 +50,12 @@ struct LogView: View {
             }
         }
         .onAppear {
-            if store.logs[taskId] == nil {
-                store.refreshLog(for: taskId)
-                logContent = store.logs[taskId]
-            }
+            store.refreshLog(for: taskId)
+            logContent = store.logs[taskId]
+        }
+        .onChange(of: taskId) { _, newId in
+            store.refreshLog(for: newId)
+            logContent = store.logs[newId]
         }
     }
 
