@@ -249,7 +249,7 @@ struct ContentView: View {
                 isEditingPrompt = true
             }
             return nil
-        case "t":
+        case "b":
             withAnimation {
                 showLogPanel.toggle()
             }
@@ -380,7 +380,7 @@ struct ContentView: View {
                     CheatsheetRow(keys: "r", description: "Refresh")
                     CheatsheetRow(keys: "s", description: "Toggle sidebar")
                     CheatsheetRow(keys: "+ / -", description: "Log font size")
-                    CheatsheetRow(keys: "t", description: "Toggle log panel")
+                    CheatsheetRow(keys: "b", description: "Toggle log panel")
                     Divider()
                     CheatsheetRow(keys: "esc", description: "Cancel edit")
                     CheatsheetRow(keys: "\u{2318}\u{21A9}", description: "Save edit")
