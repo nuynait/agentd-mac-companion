@@ -3,12 +3,10 @@ import SwiftUI
 struct TaskDetailView: View {
     let task: AgentdTask
     @Binding var selectedTaskId: String?
+    @Binding var isEditingPrompt: Bool
+    @Binding var showingDeleteConfirm: Bool
     @EnvironmentObject var store: TaskStore
-    @State private var showingDeleteConfirm = false
-    @State private var deleteError: String?
-    @State private var showingDeleteError = false
     @State private var editedPrompt: String = ""
-    @State private var isEditingPrompt = false
     @State private var promptSaveError: String?
     @State private var showingPromptSaveError = false
 
@@ -16,15 +14,17 @@ struct TaskDetailView: View {
         scrollContent
             .navigationTitle(task.id)
             .toolbar { toolbarContent }
-            .alert("Delete Task?", isPresented: $showingDeleteConfirm) {
-                deleteConfirmButtons
-            } message: {
-                Text("This will unload the launchd plist, delete the task, and remove its log. This cannot be undone.")
+            .onChange(of: isEditingPrompt) { _, editing in
+                if editing {
+                    editedPrompt = task.prompt
+                }
             }
-            .alert("Delete Failed", isPresented: $showingDeleteError) {
-                Button("OK") {}
-            } message: {
-                Text(deleteError ?? "Unknown error")
+            .onReceive(NotificationCenter.default.publisher(for: .cancelEdit)) { _ in
+                isEditingPrompt = false
+                editedPrompt = task.prompt
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .saveEdit)) { _ in
+                savePrompt()
             }
     }
 
@@ -86,24 +86,26 @@ struct TaskDetailView: View {
                         .padding(4)
                         .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
                         .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.accentColor, lineWidth: 1))
-                    HStack {
+                    HStack(spacing: 8) {
                         Button("Cancel") {
                             isEditingPrompt = false
                             editedPrompt = task.prompt
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+
+                        KeyHintInline(key: "esc")
+
+                        Spacer()
+
                         Button("Save") {
-                            if let error = store.updatePrompt(taskId: task.id, newPrompt: editedPrompt) {
-                                promptSaveError = error
-                                showingPromptSaveError = true
-                            } else {
-                                isEditingPrompt = false
-                            }
+                            savePrompt()
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
                         .disabled(editedPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || editedPrompt == task.prompt)
+
+                        KeyHintInline(key: "\u{2318}\u{21A9}")
                     }
                 } else {
                     Text(task.prompt)
@@ -111,12 +113,16 @@ struct TaskDetailView: View {
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8))
-                    Button("Edit Prompt") {
-                        editedPrompt = task.prompt
-                        isEditingPrompt = true
+                    HStack(spacing: 6) {
+                        Button("Edit Prompt") {
+                            editedPrompt = task.prompt
+                            isEditingPrompt = true
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        KeyHintInline(key: "e")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
             }
             .alert("Save Failed", isPresented: $showingPromptSaveError) {
@@ -124,6 +130,17 @@ struct TaskDetailView: View {
             } message: {
                 Text(promptSaveError ?? "Unknown error")
             }
+        }
+    }
+
+    private func savePrompt() {
+        let trimmed = editedPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, editedPrompt != task.prompt else { return }
+        if let error = store.updatePrompt(taskId: task.id, newPrompt: editedPrompt) {
+            promptSaveError = error
+            showingPromptSaveError = true
+        } else {
+            isEditingPrompt = false
         }
     }
 
@@ -171,21 +188,6 @@ struct TaskDetailView: View {
                     .foregroundStyle(Color.statusFailed)
             }
             .help("Delete task")
-        }
-    }
-
-    @ViewBuilder
-    private var deleteConfirmButtons: some View {
-        Button("Cancel", role: .cancel) {}
-        Button("Delete", role: .destructive) {
-            Task {
-                if let error = await store.removeTask(task.id) {
-                    deleteError = error
-                    showingDeleteError = true
-                } else {
-                    selectedTaskId = nil
-                }
-            }
         }
     }
 
