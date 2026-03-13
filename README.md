@@ -17,8 +17,28 @@ Agentd for Mac provides a visual interface to monitor all your scheduled AI agen
 - **Rich detail view** — View prompt, schedule, provider, working directory, run count, and timestamps
 - **Git context** — See branch, repo, commit, PR number, and issue context captured at task creation
 - **Stop conditions** — View max runs, date cutoffs, and conditional stop criteria
-- **Log viewer** — Read full agent output logs inline for each task
+- **Log viewer** — Resizable bottom panel with adjustable font size, persisted across launches
 - **Clickable PR links** — Jump directly to GitHub pull requests from the detail view
+- **Full keyboard support** — Vim-style navigation and shortcuts for every action
+
+## Keyboard Shortcuts
+
+<p align="center">
+  <img src="screenshots/keybinding.png" alt="Keyboard Shortcuts" width="360">
+</p>
+
+| Key | Action |
+|-----|--------|
+| `j` / `k` | Move task selection up / down |
+| `h` / `l` | Cycle through filter tabs |
+| `a` | Show all tasks |
+| `d` | Delete selected task (`y` / `n` to confirm) |
+| `e` | Edit prompt (`esc` to cancel, `⌘↩` to save) |
+| `r` | Refresh / reload tasks |
+| `s` | Toggle sidebar |
+| `b` | Toggle log panel |
+| `+` / `-` | Adjust log font size |
+| `?` | Show keyboard cheatsheet |
 
 ## Requirements
 
