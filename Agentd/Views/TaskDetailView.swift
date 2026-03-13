@@ -5,6 +5,7 @@ struct TaskDetailView: View {
     @Binding var selectedTaskId: String?
     @Binding var isEditingPrompt: Bool
     @Binding var showingDeleteConfirm: Bool
+    @Binding var showLogPanel: Bool
     @EnvironmentObject var store: TaskStore
     @State private var editedPrompt: String = ""
     @State private var promptSaveError: String?
@@ -44,7 +45,6 @@ struct TaskDetailView: View {
                     contextSection(context)
                 }
                 stopConditionsSection
-                logSection
             }
             .padding(24)
         }
@@ -169,26 +169,18 @@ struct TaskDetailView: View {
         }
     }
 
-    private var logSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Log Output")
-                    .font(.system(.headline, weight: .semibold))
-                Spacer()
-                HStack(spacing: 3) {
-                    KeyHintInline(key: "+")
-                    KeyHintInline(key: "-")
-                    Text("font size")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            LogView(taskId: task.id)
-        }
-    }
-
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem {
+            Button {
+                withAnimation {
+                    showLogPanel.toggle()
+                }
+            } label: {
+                Image(systemName: showLogPanel ? "rectangle.bottomhalf.inset.filled" : "rectangle.bottomhalf.filled")
+            }
+            .help(showLogPanel ? "Hide log panel" : "Show log panel")
+        }
         ToolbarItem {
             Button {
                 store.refreshLog(for: task.id)

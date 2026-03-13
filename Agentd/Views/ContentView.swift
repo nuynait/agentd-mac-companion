@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var deleteError: String?
     @State private var showingDeleteError = false
     @AppStorage("logFontSize") private var logFontSize: Double = 11
+    @AppStorage("logPanelHeight") private var logPanelHeight: Double = 500
+    @State private var showLogPanel = true
     @State private var eventMonitor: Any?
 
     enum TaskFilter: String, CaseIterable {
@@ -112,12 +114,30 @@ struct ContentView: View {
         } detail: {
             if let taskId = selectedTaskId,
                let task = store.tasks.first(where: { $0.id == taskId }) {
-                TaskDetailView(
-                    task: task,
-                    selectedTaskId: $selectedTaskId,
-                    isEditingPrompt: $isEditingPrompt,
-                    showingDeleteConfirm: $showingDeleteConfirm
-                )
+                VStack(spacing: 0) {
+                    TaskDetailView(
+                        task: task,
+                        selectedTaskId: $selectedTaskId,
+                        isEditingPrompt: $isEditingPrompt,
+                        showingDeleteConfirm: $showingDeleteConfirm,
+                        showLogPanel: $showLogPanel
+                    )
+
+                    VStack(spacing: 0) {
+                        LogPanelDragHandle()
+                            .gesture(
+                                DragGesture(minimumDistance: 1)
+                                    .onChanged { value in
+                                        logPanelHeight = max(100, min(1000, logPanelHeight - value.translation.height))
+                                    }
+                            )
+
+                        logPanel(taskId: task.id)
+                            .frame(height: logPanelHeight)
+                    }
+                    .frame(height: showLogPanel ? nil : 0)
+                    .clipped()
+                }
             } else {
                 ContentUnavailableView {
                     Label("Select a Task", systemImage: "sidebar.left")
@@ -227,6 +247,11 @@ struct ContentView: View {
         case "e":
             if selectedTaskId != nil && !isEditingPrompt {
                 isEditingPrompt = true
+            }
+            return nil
+        case "t":
+            withAnimation {
+                showLogPanel.toggle()
             }
             return nil
         case "?":
@@ -355,6 +380,7 @@ struct ContentView: View {
                     CheatsheetRow(keys: "r", description: "Refresh")
                     CheatsheetRow(keys: "s", description: "Toggle sidebar")
                     CheatsheetRow(keys: "+ / -", description: "Log font size")
+                    CheatsheetRow(keys: "t", description: "Toggle log panel")
                     Divider()
                     CheatsheetRow(keys: "esc", description: "Cancel edit")
                     CheatsheetRow(keys: "\u{2318}\u{21A9}", description: "Save edit")
@@ -371,6 +397,58 @@ struct ContentView: View {
             .frame(width: 320)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
             .shadow(radius: 20)
+        }
+    }
+
+    // MARK: - Log Panel
+
+    private func logPanel(taskId: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Log Output")
+                    .font(.system(.headline, weight: .semibold))
+                Spacer()
+                HStack(spacing: 3) {
+                    KeyHintInline(key: "+")
+                    KeyHintInline(key: "-")
+                    Text("font size")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            LogView(taskId: taskId)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 12)
+        .padding(.top, 8)
+    }
+}
+
+// MARK: - Log Panel Drag Handle
+
+struct LogPanelDragHandle: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            RoundedRectangle(cornerRadius: 2)
+                .fill(.tertiary)
+                .frame(width: 36, height: 4)
+                .padding(.vertical, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+        .cursor(.resizeUpDown)
+    }
+}
+
+extension View {
+    func cursor(_ cursor: NSCursor) -> some View {
+        onHover { inside in
+            if inside {
+                cursor.push()
+            } else {
+                NSCursor.pop()
+            }
         }
     }
 }
